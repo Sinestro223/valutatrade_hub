@@ -1,5 +1,8 @@
 import datetime
 import hashlib
+import math
+
+from .exceptions import InsufficientFundsError
 
 
 class User:
@@ -110,3 +113,90 @@ class User:
             str: хеш пароля
         """
         return hashlib.sha256((password + self._salt).encode('utf-8')).hexdigest()
+
+
+class Wallet:
+    """Кошелек для одной валюты"""
+
+    def __init__(self, currency_code: str, balance: float = 0.0) -> None:
+        """Создание кошелька
+
+        Args:
+            currency_code (str): код валюты
+            balance (float): начальный баланс
+        """
+        self.currency_code = currency_code
+        self.balance = balance
+
+    @property
+    def balance(self) -> float:
+        """Текущий баланс кошелька"""
+        return self._balance
+
+    @balance.setter
+    def balance(self, new_balance: float) -> None:
+        """Изменение баланса кошелька
+
+        Args:
+            new_balance (float): новый баланс
+        """
+        if not self._is_finite_number(new_balance) or new_balance < 0:
+            raise ValueError('Баланс должен быть конечным неотрицательным числом')
+        self._balance = float(new_balance)
+
+    def deposit(self, amount: float) -> None:
+        """Пополнение баланса
+
+        Args:
+            amount (float): сумма пополнения
+        """
+        self._validate_amount(amount)
+        self.balance += amount
+
+    def withdraw(self, amount: float) -> None:
+        """Снятие средств с кошелька
+
+        Args:
+            amount (float): сумма снятия
+        """
+        self._validate_amount(amount)
+        if amount > self.balance:
+            raise InsufficientFundsError(
+                f'Недостаточно средств: доступно {self.balance} {self.currency_code}, '
+                f'требуется {amount} {self.currency_code}'
+            )
+        self.balance -= amount
+
+    def get_balance_info(self) -> dict[str, str | float]:
+        """Получение информации о балансе
+
+        Returns:
+            dict[str, str | float]: код валюты и баланс
+        """
+        return {'currency_code': self.currency_code, 'balance': self.balance}
+
+    def _validate_amount(self, amount: float) -> None:
+        """Проверка суммы операции
+
+        Args:
+            amount (float): сумма операции
+        """
+        if not self._is_finite_number(amount) or amount <= 0:
+            raise ValueError('Сумма должна быть конечным положительным числом')
+
+    @staticmethod
+    def _is_finite_number(value: object) -> bool:
+        """Проверка числового значения
+
+        Args:
+            value (object): значение для проверки
+
+        Returns:
+            bool: является ли значение конечным числом
+        """
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return False
+        try:
+            return math.isfinite(value)
+        except OverflowError:
+            return False
