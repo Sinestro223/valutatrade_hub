@@ -4,6 +4,16 @@ import math
 
 from .exceptions import InsufficientFundsError
 
+EXCHANGE_RATES = {
+    'USD': 1.0,
+    'EUR': 1.08,
+    'GBP': 1.25,
+    'RUB': 0.01,
+    'BTC': 59300.0,
+    'ETH': 3720.0,
+    'SOL': 150.0,
+}
+
 
 class User:
     """Пользователь валютного кошелька"""
@@ -200,3 +210,87 @@ class Wallet:
             return math.isfinite(value)
         except OverflowError:
             return False
+
+
+class Portfolio:
+    """Портфель пользователя"""
+
+    def __init__(
+            self,
+            user: User,
+            wallets: dict[str, Wallet] | None = None,
+        ) -> None:
+        """Создание портфеля
+
+        Args:
+            user (User): владелец портфеля
+            wallets (dict[str, Wallet] | None): кошельки пользователя
+        """
+        self._user = user
+        self._user_id = user.user_id
+        self._wallets = {} if wallets is None else wallets.copy()
+
+    @property
+    def user(self) -> User:
+        """Пользователь портфеля
+
+        Returns:
+            User
+        """
+        return self._user
+
+    @property
+    def wallets(self) -> dict[str, Wallet]:
+        """Копия словаря кошельков
+
+        Returns:
+            dict[str, Wallet]
+        """
+        return self._wallets.copy()
+
+    def add_currency(self, currency_code: str) -> Wallet:
+        """Добавление кошелька для валюты
+
+        Args:
+            currency_code (str): код валюты
+
+        Returns:
+            Wallet: новый или существующий кошелек
+        """
+        currency_code = currency_code.strip().upper()
+        if not currency_code:
+            raise ValueError('Код валюты не может быть пустым')
+        if currency_code not in self._wallets:
+            self._wallets[currency_code] = Wallet(currency_code)
+        return self._wallets[currency_code]
+
+    def get_wallet(self, currency_code: str) -> Wallet | None:
+        """Поиск кошелька по коду валюты
+
+        Args:
+            currency_code (str): код валюты
+
+        Returns:
+            Wallet | None: кошелек или None, если он отсутствует
+        """
+        return self._wallets.get(currency_code.strip().upper())
+
+    def get_total_value(self, base_currency: str = 'USD') -> float:
+        """Расчет общей стоимости портфеля
+
+        Args:
+            base_currency (str): базовая валюта
+
+        Returns:
+            float: стоимость портфеля в базовой валюте
+        """
+        base_currency = base_currency.strip().upper()
+        if base_currency not in EXCHANGE_RATES:
+            raise ValueError(f'Неизвестная базовая валюта "{base_currency}"')
+
+        total_usd = 0.0
+        for currency_code, wallet in self._wallets.items():
+            if currency_code not in EXCHANGE_RATES:
+                raise ValueError(f'Нет курса для валюты "{currency_code}"')
+            total_usd += wallet.balance * EXCHANGE_RATES[currency_code]
+        return total_usd / EXCHANGE_RATES[base_currency]
