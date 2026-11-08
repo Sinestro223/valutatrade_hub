@@ -35,3 +35,9 @@ exclude = ["venv", ".venv", "dist", "__pycache__"]
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = []
+
+[tool.valutatrade]
+users_file = "data/users.json"
+portfolios_file = "data/portfolios.json"
+rates_file = "data/rates.json"
+rates_ttl_seconds = 300
