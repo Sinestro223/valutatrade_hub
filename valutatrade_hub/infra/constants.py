@@ -3,6 +3,7 @@ from pathlib import Path
 SETTINGS_FILE = Path('pyproject.toml')
 
 ACTIONS_LOG_FILE = Path('logs/actions.log')
+PARSER_LOG_FILE = Path('logs/parser.log')
 LOG_MAX_BYTES = 1_000_000
 LOG_BACKUP_COUNT = 3
 LOG_FORMAT = '%(levelname)s %(asctime)s %(message)s'

@@ -1,10 +1,13 @@
 import argparse
 import shlex
 
+from prettytable import PrettyTable
+
 from ..core.currencies import CURRENCIES
 from ..core.exceptions import CurrencyNotFoundError
 from ..core.usecases import buy, get_rate, login, register, sell, show_portfolio
 from ..logging_config import configure_logging
+from ..parser_service.usecases import show_rates, update_rates
 
 
 def main() -> None:
@@ -28,6 +31,14 @@ def main() -> None:
     rate_parser = commands.add_parser('get-rate', add_help=False)
     rate_parser.add_argument('--from', dest='from_currency', required=True)
     rate_parser.add_argument('--to', dest='to_currency', required=True)
+
+    update_parser = commands.add_parser('update-rates', add_help=False)
+    update_parser.add_argument('--source', choices=('coingecko', 'exchangerate'))
+
+    show_parser = commands.add_parser('show-rates', add_help=False)
+    show_parser.add_argument('--currency')
+    show_parser.add_argument('--top', type=int)
+    show_parser.add_argument('--base', default='USD')
 
     current_user = None
     while True:
@@ -106,6 +117,25 @@ def main() -> None:
                     message += f' (обновлено: {updated_at.isoformat(sep=" ")})'
                 print(message)
                 print(f'Обратный курс {to_currency}→{from_currency}: {1 / rate:.8g}')
+            elif args.command == 'update-rates':
+                updated, errors = update_rates(args.source)
+                print(f'Обновлено курсов: {updated}')
+                if errors:
+                    print('Обновление завершилось с ошибками')
+                    for error in errors:
+                        print(error)
+            elif args.command == 'show-rates':
+                rows = show_rates(args.currency, args.top, args.base)
+                if not rows:
+                    print('По заданным фильтрам курсы не найдены')
+                    continue
+
+                table = PrettyTable(['Пара', 'Курс', 'Обновлено'])
+                for pair, rate, updated_at in rows:
+                    table.add_row([
+                        pair, f'{rate:.8g}', updated_at.isoformat(sep=' '),
+                    ])
+                print(table)
         except (EOFError, KeyboardInterrupt):
             print()
             return
