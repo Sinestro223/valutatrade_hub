@@ -14,3 +14,6 @@ EXCHANGE_RATES = {
     'ETH': 3720.0,
     'SOL': 150.0,
 }
+
+RATES_FILE = Path('data/rates.json')
+RATES_TTL_SECONDS = 300

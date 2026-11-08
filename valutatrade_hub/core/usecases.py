@@ -3,6 +3,7 @@ from secrets import token_hex
 
 from .constants import EXCHANGE_RATES, PORTFOLIOS_FILE, USERS_FILE
 from .models import Portfolio, User, Wallet
+from .rates import get_cross_rate, load_rates
 from .utils import load_records, save_records
 
 
@@ -103,12 +104,18 @@ def show_portfolio(
         tuple[list[tuple[str, float, float]], float]: строки портфеля и итог
     """
     portfolio = load_portfolio(user)
-    values = portfolio.get_wallet_values(base_currency)
-    rows = [
-        (code, wallet.balance, values[code])
-        for code, wallet in portfolio.wallets.items()
-    ]
-    return rows, sum(values.values())
+    base_currency = base_currency.strip().upper()
+    wallets = portfolio.wallets
+    pairs = load_rates()
+    if base_currency not in EXCHANGE_RATES and f'{base_currency}_USD' not in pairs:
+        raise ValueError(f"Неизвестная базовая валюта '{base_currency}'")
+
+    now = datetime.datetime.now(datetime.UTC)
+    rows = []
+    for code, wallet in wallets.items():
+        rate, _ = get_cross_rate(code, base_currency, pairs, now)
+        rows.append((code, wallet.balance, wallet.balance * rate))
+    return rows, sum((value for _, _, value in rows), 0.0)
 
 
 def save_portfolio(portfolio: Portfolio) -> None:
@@ -130,21 +137,10 @@ def save_portfolio(portfolio: Portfolio) -> None:
     raise ValueError(f"Портфель пользователя '{portfolio.user.username}' не найден")
 
 
-def get_rate_to_usd(currency_code: str) -> float:
-    """Получение курса валюты к USD
-
-    Args:
-        currency_code (str): код валюты
-
-    Returns:
-        float: курс к USD
-    """
-    if currency_code not in EXCHANGE_RATES:
-        raise ValueError(f"Не удалось получить курс для '{currency_code}' к USD")
-    return EXCHANGE_RATES[currency_code]
-
-
-def get_rate(from_currency: str, to_currency: str) -> float:
+def get_rate(
+        from_currency: str,
+        to_currency: str,
+    ) -> tuple[float, datetime.datetime | None]:
     """Получение курса между двумя валютами
 
     Args:
@@ -152,11 +148,14 @@ def get_rate(from_currency: str, to_currency: str) -> float:
         to_currency (str): код целевой валюты
 
     Returns:
-        float: стоимость единицы исходной валюты в целевой
+        tuple[float, datetime.datetime | None]: курс и время обновления
     """
-    from_rate = get_rate_to_usd(from_currency.strip().upper())
-    to_rate = get_rate_to_usd(to_currency.strip().upper())
-    return from_rate / to_rate
+    return get_cross_rate(
+        from_currency.strip().upper(),
+        to_currency.strip().upper(),
+        load_rates(),
+        datetime.datetime.now(datetime.UTC),
+    )
 
 
 def buy(
@@ -175,7 +174,7 @@ def buy(
         tuple[float, float, float, float]: курс, старый и новый баланс, стоимость
     """
     currency_code = currency_code.strip().upper()
-    rate = get_rate_to_usd(currency_code)
+    rate, _ = get_rate(currency_code, 'USD')
     portfolio = load_portfolio(user)
     wallet = portfolio.add_currency(currency_code)
     old_balance = wallet.balance
@@ -200,7 +199,7 @@ def sell(
         tuple[float, float, float, float]: курс, старый и новый баланс, выручка
     """
     currency_code = currency_code.strip().upper()
-    rate = get_rate_to_usd(currency_code)
+    rate, _ = get_rate(currency_code, 'USD')
     portfolio = load_portfolio(user)
     wallet = portfolio.get_wallet(currency_code)
     if wallet is None:

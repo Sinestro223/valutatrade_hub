@@ -96,8 +96,11 @@ def main() -> None:
             elif args.command == 'get-rate':
                 from_currency = args.from_currency.strip().upper()
                 to_currency = args.to_currency.strip().upper()
-                rate = get_rate(from_currency, to_currency)
-                print(f'Курс {from_currency}→{to_currency}: {rate:.8g}')
+                rate, updated_at = get_rate(from_currency, to_currency)
+                message = f'Курс {from_currency}→{to_currency}: {rate:.8g}'
+                if updated_at is not None:
+                    message += f' (обновлено: {updated_at.isoformat(sep=" ")})'
+                print(message)
                 print(f'Обратный курс {to_currency}→{from_currency}: {1 / rate:.8g}')
         except (EOFError, KeyboardInterrupt):
             print()
