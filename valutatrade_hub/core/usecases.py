@@ -2,7 +2,7 @@ import datetime
 from secrets import token_hex
 
 from .constants import PORTFOLIOS_FILE, USERS_FILE
-from .models import User
+from .models import Portfolio, User, Wallet
 from .utils import load_records, save_records
 
 
@@ -67,3 +67,45 @@ def login(username: str, password: str) -> User:
             return user
 
     raise ValueError(f"Пользователь '{username}' не найден")
+
+
+def load_portfolio(user: User) -> Portfolio:
+    """Загрузка портфеля пользователя
+
+    Args:
+        user (User): владелец портфеля
+
+    Returns:
+        Portfolio: портфель с сохраненными кошельками
+    """
+    for record in load_records(PORTFOLIOS_FILE):
+        if record['user_id'] == user.user_id:
+            wallets = {
+                code: Wallet(code, data['balance'])
+                for code, data in record['wallets'].items()
+            }
+            return Portfolio(user, wallets)
+
+    raise ValueError(f"Портфель пользователя '{user.username}' не найден")
+
+
+def show_portfolio(
+        user: User,
+        base_currency: str = 'USD',
+    ) -> tuple[list[tuple[str, float, float]], float]:
+    """Получение балансов и стоимости портфеля
+
+    Args:
+        user (User): владелец портфеля
+        base_currency (str): базовая валюта
+
+    Returns:
+        tuple[list[tuple[str, float, float]], float]: строки портфеля и итог
+    """
+    portfolio = load_portfolio(user)
+    values = portfolio.get_wallet_values(base_currency)
+    rows = [
+        (code, wallet.balance, values[code])
+        for code, wallet in portfolio.wallets.items()
+    ]
+    return rows, sum(values.values())

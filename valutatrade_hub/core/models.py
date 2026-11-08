@@ -277,13 +277,26 @@ class Portfolio:
         Returns:
             float: стоимость портфеля в базовой валюте
         """
+        return sum(self.get_wallet_values(base_currency).values(), 0.0)
+
+    def get_wallet_values(self, base_currency: str) -> dict[str, float]:
+        """Расчет стоимости каждого кошелька
+
+        Args:
+            base_currency (str): базовая валюта
+
+        Returns:
+            dict[str, float]: стоимость кошельков по кодам валют
+        """
         base_currency = base_currency.strip().upper()
         if base_currency not in EXCHANGE_RATES:
-            raise ValueError(f'Неизвестная базовая валюта "{base_currency}"')
+            raise ValueError(f"Неизвестная базовая валюта '{base_currency}'")
 
-        total_usd = 0.0
+        base_rate = EXCHANGE_RATES[base_currency]
+        values = {}
         for currency_code, wallet in self._wallets.items():
             if currency_code not in EXCHANGE_RATES:
                 raise ValueError(f'Нет курса для валюты "{currency_code}"')
-            total_usd += wallet.balance * EXCHANGE_RATES[currency_code]
-        return total_usd / EXCHANGE_RATES[base_currency]
+            rate = EXCHANGE_RATES[currency_code]
+            values[currency_code] = wallet.balance * rate / base_rate
+        return values
