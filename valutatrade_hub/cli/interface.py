@@ -1,7 +1,7 @@
 import argparse
 import shlex
 
-from ..core.usecases import buy, login, register, sell, show_portfolio
+from ..core.usecases import buy, get_rate, login, register, sell, show_portfolio
 
 
 def main() -> None:
@@ -20,6 +20,10 @@ def main() -> None:
         command_parser = commands.add_parser(command, add_help=False)
         command_parser.add_argument('--currency', required=True)
         command_parser.add_argument('--amount', required=True, type=float)
+
+    rate_parser = commands.add_parser('get-rate', add_help=False)
+    rate_parser.add_argument('--from', dest='from_currency', required=True)
+    rate_parser.add_argument('--to', dest='to_currency', required=True)
 
     current_user = None
     while True:
@@ -89,6 +93,12 @@ def main() -> None:
                 )
                 print(f'- {code}: было {old_balance:g} -> стало {balance:g}')
                 print(f'{label}: {value:,.2f} USD')
+            elif args.command == 'get-rate':
+                from_currency = args.from_currency.strip().upper()
+                to_currency = args.to_currency.strip().upper()
+                rate = get_rate(from_currency, to_currency)
+                print(f'Курс {from_currency}→{to_currency}: {rate:.8g}')
+                print(f'Обратный курс {to_currency}→{from_currency}: {1 / rate:.8g}')
         except (EOFError, KeyboardInterrupt):
             print()
             return

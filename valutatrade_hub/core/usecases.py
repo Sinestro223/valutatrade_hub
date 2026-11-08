@@ -144,6 +144,21 @@ def get_rate_to_usd(currency_code: str) -> float:
     return EXCHANGE_RATES[currency_code]
 
 
+def get_rate(from_currency: str, to_currency: str) -> float:
+    """Получение курса между двумя валютами
+
+    Args:
+        from_currency (str): код исходной валюты
+        to_currency (str): код целевой валюты
+
+    Returns:
+        float: стоимость единицы исходной валюты в целевой
+    """
+    from_rate = get_rate_to_usd(from_currency.strip().upper())
+    to_rate = get_rate_to_usd(to_currency.strip().upper())
+    return from_rate / to_rate
+
+
 def buy(
         user: User,
         currency_code: str,
