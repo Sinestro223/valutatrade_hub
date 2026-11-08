@@ -2,17 +2,8 @@ import datetime
 import hashlib
 import math
 
+from .constants import EXCHANGE_RATES, MIN_PASSWORD_LENGTH
 from .exceptions import InsufficientFundsError
-
-EXCHANGE_RATES = {
-    'USD': 1.0,
-    'EUR': 1.08,
-    'GBP': 1.25,
-    'RUB': 0.01,
-    'BTC': 59300.0,
-    'ETH': 3720.0,
-    'SOL': 150.0,
-}
 
 
 class User:
@@ -95,8 +86,10 @@ class User:
         Args:
             new_password (str): новый пароль
         """
-        if len(new_password) < 4:
-            raise ValueError('Пароль не может быть короче 4 символов')
+        if len(new_password) < MIN_PASSWORD_LENGTH:
+            raise ValueError(
+                f'Пароль не может быть короче {MIN_PASSWORD_LENGTH} символов'
+            )
         if self.verify_password(new_password):
             raise ValueError('Пароль не может совпадать с текущим')
 

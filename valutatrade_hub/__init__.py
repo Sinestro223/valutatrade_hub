@@ -1,2 +1,3 @@
-def main() -> None:
-    print("Hello from valutatrade-hub!")
+from .cli.interface import main
+
+__all__ = ['main']
