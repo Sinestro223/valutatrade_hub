@@ -3,7 +3,9 @@ from secrets import token_hex
 
 from ..decorators import log_action
 from ..infra.database import DatabaseManager
+from ..parser_service.usecases import update_rates
 from .currencies import get_currency
+from .exceptions import ApiRequestError
 from .models import Portfolio, User, Wallet
 from .rates import get_cross_rate, load_rates
 
@@ -141,21 +143,31 @@ def save_portfolio(portfolio: Portfolio) -> None:
 def get_rate(
         from_currency: str,
         to_currency: str,
+        refresh: bool = True,
     ) -> tuple[float, datetime.datetime | None]:
     """Получение курса между двумя валютами
 
     Args:
         from_currency (str): код исходной валюты
         to_currency (str): код целевой валюты
+        refresh (bool): обновлять ли кеш при отсутствии свежего курса
 
     Returns:
         tuple[float, datetime.datetime | None]: курс и время обновления
     """
+    from_code = get_currency(from_currency).code
+    to_code = get_currency(to_currency).code
+    try:
+        return get_cross_rate(
+            from_code, to_code, load_rates(), datetime.datetime.now(datetime.UTC),
+        )
+    except ApiRequestError:
+        if not refresh:
+            raise
+
+    update_rates()
     return get_cross_rate(
-        get_currency(from_currency).code,
-        get_currency(to_currency).code,
-        load_rates(),
-        datetime.datetime.now(datetime.UTC),
+        from_code, to_code, load_rates(), datetime.datetime.now(datetime.UTC),
     )
 
 
@@ -175,7 +187,7 @@ def buy(
     Returns:
         tuple[float, float, float, float]: курс, старый и новый баланс, стоимость
     """
-    rate, _ = get_rate(currency_code, 'USD')
+    rate, _ = get_rate(currency_code, 'USD', refresh=False)
     currency_code = currency_code.strip().upper()
     portfolio = load_portfolio(user)
     wallet = portfolio.add_currency(currency_code)
@@ -201,7 +213,7 @@ def sell(
     Returns:
         tuple[float, float, float, float]: курс, старый и новый баланс, выручка
     """
-    rate, _ = get_rate(currency_code, 'USD')
+    rate, _ = get_rate(currency_code, 'USD', refresh=False)
     currency_code = currency_code.strip().upper()
     portfolio = load_portfolio(user)
     wallet = portfolio.get_wallet(currency_code)
