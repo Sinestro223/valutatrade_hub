@@ -1,11 +1,10 @@
 import datetime
 from secrets import token_hex
 
-from .constants import PORTFOLIOS_FILE, USERS_FILE
+from ..infra.database import DatabaseManager
 from .currencies import get_currency
 from .models import Portfolio, User, Wallet
 from .rates import get_cross_rate, load_rates
-from .utils import load_records, save_records
 
 
 def register(username: str, password: str) -> User:
@@ -19,7 +18,8 @@ def register(username: str, password: str) -> User:
         User: зарегистрированный пользователь
     """
     username = username.strip()
-    users = load_records(USERS_FILE)
+    database = DatabaseManager()
+    users = database.load_users()
     if any(record['username'] == username for record in users):
         raise ValueError(f"Имя пользователя '{username}' уже занято")
 
@@ -28,10 +28,10 @@ def register(username: str, password: str) -> User:
     user = User(user_id, username, '', token_hex(16), registration_date)
     user.change_password(password)
 
-    portfolios = load_records(PORTFOLIOS_FILE)
+    portfolios = database.load_portfolios()
     if not any(record['user_id'] == user_id for record in portfolios):
         portfolios.append({'user_id': user_id, 'wallets': {}})
-        save_records(PORTFOLIOS_FILE, portfolios)
+        database.save_portfolios(portfolios)
 
     users.append({
         'user_id': user.user_id,
@@ -40,7 +40,7 @@ def register(username: str, password: str) -> User:
         'salt': user.salt,
         'registration_date': user.registration_date.isoformat(),
     })
-    save_records(USERS_FILE, users)
+    database.save_users(users)
     return user
 
 
@@ -55,7 +55,7 @@ def login(username: str, password: str) -> User:
         User: пользователь, который вошел в систему
     """
     username = username.strip()
-    for record in load_records(USERS_FILE):
+    for record in DatabaseManager().load_users():
         if record['username'] == username:
             user = User(
                 record['user_id'],
@@ -80,7 +80,7 @@ def load_portfolio(user: User) -> Portfolio:
     Returns:
         Portfolio: портфель с сохраненными кошельками
     """
-    for record in load_records(PORTFOLIOS_FILE):
+    for record in DatabaseManager().load_portfolios():
         if record['user_id'] == user.user_id:
             wallets = {
                 code: Wallet(code, data['balance'])
@@ -123,14 +123,15 @@ def save_portfolio(portfolio: Portfolio) -> None:
     Args:
         portfolio (Portfolio): портфель пользователя
     """
-    records = load_records(PORTFOLIOS_FILE)
+    database = DatabaseManager()
+    records = database.load_portfolios()
     for record in records:
         if record['user_id'] == portfolio.user.user_id:
             record['wallets'] = {
                 code: {'balance': wallet.balance}
                 for code, wallet in portfolio.wallets.items()
             }
-            save_records(PORTFOLIOS_FILE, records)
+            database.save_portfolios(records)
             return
 
     raise ValueError(f"Портфель пользователя '{portfolio.user.username}' не найден")
