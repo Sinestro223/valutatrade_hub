@@ -13,7 +13,7 @@ class ParserConfig:
     coingecko_url: str = 'https://api.coingecko.com/api/v3/simple/price'
     exchangerate_url: str = 'https://v6.exchangerate-api.com/v6'
     base_currency: str = 'USD'
-    fiat_currencies: tuple[str, ...] = ('EUR', 'GBP', 'RUB')
+    fiat_currencies: tuple[str] = ('EUR', 'GBP', 'RUB')
     crypto_id_map: dict[str, str] = field(default_factory=lambda: {
         'BTC': 'bitcoin',
         'ETH': 'ethereum',
