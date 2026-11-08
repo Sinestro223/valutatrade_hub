@@ -4,10 +4,12 @@ import shlex
 from ..core.currencies import CURRENCIES
 from ..core.exceptions import CurrencyNotFoundError
 from ..core.usecases import buy, get_rate, login, register, sell, show_portfolio
+from ..logging_config import configure_logging
 
 
 def main() -> None:
     """Запуск интерфейса"""
+    configure_logging()
     parser = argparse.ArgumentParser(prog='valutatrade-hub', add_help=False)
     commands = parser.add_subparsers(dest='command', required=True)
     for command in ('register', 'login'):

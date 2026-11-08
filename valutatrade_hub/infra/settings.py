@@ -1,8 +1,7 @@
 import tomllib
-from pathlib import Path
 from typing import Any
 
-SETTINGS_FILE = Path('pyproject.toml')
+from .constants import SETTINGS_FILE
 
 
 class SettingsLoader:
@@ -12,7 +11,6 @@ class SettingsLoader:
 
     def __new__(cls):
         """Получение единственного экземпляра"""
-        # __new__ позволяет повторно использовать объект без метакласса
         if cls._instance is None:
             instance = super().__new__(cls)
             try:

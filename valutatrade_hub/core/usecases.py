@@ -1,6 +1,7 @@
 import datetime
 from secrets import token_hex
 
+from ..decorators import log_action
 from ..infra.database import DatabaseManager
 from .currencies import get_currency
 from .models import Portfolio, User, Wallet
@@ -158,6 +159,7 @@ def get_rate(
     )
 
 
+@log_action('BUY', verbose=True)
 def buy(
         user: User,
         currency_code: str,
@@ -183,6 +185,7 @@ def buy(
     return rate, old_balance, wallet.balance, amount * rate
 
 
+@log_action('SELL', verbose=True)
 def sell(
         user: User,
         currency_code: str,
