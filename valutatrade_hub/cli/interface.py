@@ -1,7 +1,7 @@
 import argparse
 import shlex
 
-from ..core.usecases import login, register, show_portfolio
+from ..core.usecases import buy, login, register, sell, show_portfolio
 
 
 def main() -> None:
@@ -15,6 +15,11 @@ def main() -> None:
 
     portfolio_parser = commands.add_parser('show-portfolio', add_help=False)
     portfolio_parser.add_argument('--base', default='USD')
+
+    for command in ('buy', 'sell'):
+        command_parser = commands.add_parser(command, add_help=False)
+        command_parser.add_argument('--currency', required=True)
+        command_parser.add_argument('--amount', required=True, type=float)
 
     current_user = None
     while True:
@@ -60,6 +65,30 @@ def main() -> None:
                     print(f'- {code}: {balance:g} -> {value:,.2f} {base_currency}')
                 print('---------------------------------')
                 print(f'ИТОГО: {total:,.2f} {base_currency}')
+            elif args.command in ('buy', 'sell'):
+                if current_user is None:
+                    print('Сначала выполните login')
+                    continue
+
+                code = args.currency.strip().upper()
+                if args.command == 'buy':
+                    rate, old_balance, balance, value = buy(
+                        current_user, code, args.amount,
+                    )
+                    operation = 'Покупка'
+                    label = 'Оценочная стоимость покупки'
+                else:
+                    rate, old_balance, balance, value = sell(
+                        current_user, code, args.amount,
+                    )
+                    operation = 'Продажа'
+                    label = 'Оценочная выручка'
+                print(
+                    f'{operation} выполнена: {args.amount:g} {code} '
+                    f'по курсу {rate:.2f} USD/{code}'
+                )
+                print(f'- {code}: было {old_balance:g} -> стало {balance:g}')
+                print(f'{label}: {value:,.2f} USD')
         except (EOFError, KeyboardInterrupt):
             print()
             return

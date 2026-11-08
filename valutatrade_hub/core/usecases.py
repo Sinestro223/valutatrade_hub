@@ -1,7 +1,7 @@
 import datetime
 from secrets import token_hex
 
-from .constants import PORTFOLIOS_FILE, USERS_FILE
+from .constants import EXCHANGE_RATES, PORTFOLIOS_FILE, USERS_FILE
 from .models import Portfolio, User, Wallet
 from .utils import load_records, save_records
 
@@ -109,3 +109,89 @@ def show_portfolio(
         for code, wallet in portfolio.wallets.items()
     ]
     return rows, sum(values.values())
+
+
+def save_portfolio(portfolio: Portfolio) -> None:
+    """Сохранение кошельков пользователя
+
+    Args:
+        portfolio (Portfolio): портфель пользователя
+    """
+    records = load_records(PORTFOLIOS_FILE)
+    for record in records:
+        if record['user_id'] == portfolio.user.user_id:
+            record['wallets'] = {
+                code: {'balance': wallet.balance}
+                for code, wallet in portfolio.wallets.items()
+            }
+            save_records(PORTFOLIOS_FILE, records)
+            return
+
+    raise ValueError(f"Портфель пользователя '{portfolio.user.username}' не найден")
+
+
+def get_rate_to_usd(currency_code: str) -> float:
+    """Получение курса валюты к USD
+
+    Args:
+        currency_code (str): код валюты
+
+    Returns:
+        float: курс к USD
+    """
+    if currency_code not in EXCHANGE_RATES:
+        raise ValueError(f"Не удалось получить курс для '{currency_code}' к USD")
+    return EXCHANGE_RATES[currency_code]
+
+
+def buy(
+        user: User,
+        currency_code: str,
+        amount: float,
+    ) -> tuple[float, float, float, float]:
+    """Покупка валюты и сохранение портфеля
+
+    Args:
+        user (User): владелец портфеля
+        currency_code (str): код валюты
+        amount (float): количество валюты
+
+    Returns:
+        tuple[float, float, float, float]: курс, старый и новый баланс, стоимость
+    """
+    currency_code = currency_code.strip().upper()
+    rate = get_rate_to_usd(currency_code)
+    portfolio = load_portfolio(user)
+    wallet = portfolio.add_currency(currency_code)
+    old_balance = wallet.balance
+    wallet.deposit(amount)
+    save_portfolio(portfolio)
+    return rate, old_balance, wallet.balance, amount * rate
+
+
+def sell(
+        user: User,
+        currency_code: str,
+        amount: float,
+    ) -> tuple[float, float, float, float]:
+    """Продажа валюты и сохранение портфеля
+
+    Args:
+        user (User): владелец портфеля
+        currency_code (str): код валюты
+        amount (float): количество валюты
+
+    Returns:
+        tuple[float, float, float, float]: курс, старый и новый баланс, выручка
+    """
+    currency_code = currency_code.strip().upper()
+    rate = get_rate_to_usd(currency_code)
+    portfolio = load_portfolio(user)
+    wallet = portfolio.get_wallet(currency_code)
+    if wallet is None:
+        raise ValueError(f"У вас нет кошелька '{currency_code}'")
+
+    old_balance = wallet.balance
+    wallet.withdraw(amount)
+    save_portfolio(portfolio)
+    return rate, old_balance, wallet.balance, amount * rate
