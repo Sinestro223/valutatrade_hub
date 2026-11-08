@@ -1,7 +1,8 @@
 import datetime
 from secrets import token_hex
 
-from .constants import EXCHANGE_RATES, PORTFOLIOS_FILE, USERS_FILE
+from .constants import PORTFOLIOS_FILE, USERS_FILE
+from .currencies import get_currency
 from .models import Portfolio, User, Wallet
 from .rates import get_cross_rate, load_rates
 from .utils import load_records, save_records
@@ -104,11 +105,9 @@ def show_portfolio(
         tuple[list[tuple[str, float, float]], float]: строки портфеля и итог
     """
     portfolio = load_portfolio(user)
-    base_currency = base_currency.strip().upper()
+    base_currency = get_currency(base_currency).code
     wallets = portfolio.wallets
     pairs = load_rates()
-    if base_currency not in EXCHANGE_RATES and f'{base_currency}_USD' not in pairs:
-        raise ValueError(f"Неизвестная базовая валюта '{base_currency}'")
 
     now = datetime.datetime.now(datetime.UTC)
     rows = []
@@ -151,8 +150,8 @@ def get_rate(
         tuple[float, datetime.datetime | None]: курс и время обновления
     """
     return get_cross_rate(
-        from_currency.strip().upper(),
-        to_currency.strip().upper(),
+        get_currency(from_currency).code,
+        get_currency(to_currency).code,
         load_rates(),
         datetime.datetime.now(datetime.UTC),
     )
@@ -173,8 +172,8 @@ def buy(
     Returns:
         tuple[float, float, float, float]: курс, старый и новый баланс, стоимость
     """
-    currency_code = currency_code.strip().upper()
     rate, _ = get_rate(currency_code, 'USD')
+    currency_code = currency_code.strip().upper()
     portfolio = load_portfolio(user)
     wallet = portfolio.add_currency(currency_code)
     old_balance = wallet.balance
@@ -198,8 +197,8 @@ def sell(
     Returns:
         tuple[float, float, float, float]: курс, старый и новый баланс, выручка
     """
-    currency_code = currency_code.strip().upper()
     rate, _ = get_rate(currency_code, 'USD')
+    currency_code = currency_code.strip().upper()
     portfolio = load_portfolio(user)
     wallet = portfolio.get_wallet(currency_code)
     if wallet is None:

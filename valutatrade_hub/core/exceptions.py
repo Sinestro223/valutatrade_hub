@@ -4,3 +4,7 @@ class InsufficientFundsError(ValueError):
 
 class ApiRequestError(ValueError):
     """Курс валюты недоступен"""
+
+
+class CurrencyNotFoundError(ValueError):
+    """Код валюты отсутствует в реестре"""

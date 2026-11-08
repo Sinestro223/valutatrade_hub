@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..infra.settings import SettingsLoader
-from .constants import EXCHANGE_RATES, RATES_FILE, RATES_TTL_SECONDS
+from .constants import RATES_FILE, RATES_TTL_SECONDS
 from .exceptions import ApiRequestError
 
 
@@ -80,9 +80,7 @@ def get_cross_rate(
     Returns:
         tuple[float, datetime.datetime | None]: курс и время самой старой записи
     """
-    if from_currency == to_currency and (
-        from_currency in EXCHANGE_RATES or f'{from_currency}_USD' in pairs
-    ):
+    if from_currency == to_currency:
         return 1.0, None
 
     from_rate, from_updated_at = get_rate_to_usd(from_currency, pairs, now)

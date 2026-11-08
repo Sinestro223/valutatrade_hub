@@ -1,6 +1,8 @@
 import argparse
 import shlex
 
+from ..core.currencies import CURRENCIES
+from ..core.exceptions import CurrencyNotFoundError
 from ..core.usecases import buy, get_rate, login, register, sell, show_portfolio
 
 
@@ -105,5 +107,8 @@ def main() -> None:
         except (EOFError, KeyboardInterrupt):
             print()
             return
+        except CurrencyNotFoundError as error:
+            print(error)
+            print('Поддерживаемые валюты: ' + ', '.join(sorted(CURRENCIES)))
         except (ValueError, OSError) as error:
             print(error)
